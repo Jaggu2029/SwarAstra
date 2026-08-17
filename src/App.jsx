@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import SplashScreen from './components/SplashScreen';
 
@@ -13,6 +13,14 @@ const Maths = lazy(() => import('./pages/Maths'));
 const Science = lazy(() => import('./pages/Science'));
 const ProgressReport = lazy(() => import('./pages/ProgressReport'));
 const TeacherPanel = lazy(() => import('./pages/TeacherPanel'));
+
+const ProtectedRoute = ({ children }) => {
+  const { session } = useSession();
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
 
 const AppContent = () => {
   const { session, loading } = useSession();
@@ -44,15 +52,15 @@ const AppContent = () => {
         </div>
       }>
         <Routes>
-          <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/sign-language/*" element={<SignLanguage />} />
-          <Route path="/maths/*" element={<Maths />} />
-          <Route path="/science/*" element={<Science />} />
-          <Route path="/progress-report" element={<ProgressReport />} />
-          <Route path="/teacher" element={<TeacherPanel />} />
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/sign-language/*" element={<ProtectedRoute><SignLanguage /></ProtectedRoute>} />
+          <Route path="/maths/*" element={<ProtectedRoute><Maths /></ProtectedRoute>} />
+          <Route path="/science/*" element={<ProtectedRoute><Science /></ProtectedRoute>} />
+          <Route path="/progress-report" element={<ProtectedRoute><ProgressReport /></ProtectedRoute>} />
+          <Route path="/teacher" element={<ProtectedRoute><TeacherPanel /></ProtectedRoute>} />
           <Route path="/splash" element={<SplashScreen forcePlay={true} targetRoute="/login" />} />
-          <Route path="*" element={<div style={{ textAlign: "center", padding: "80px 24px", color: "#999", fontSize: 18 }}>404 — Page not found</div>} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Suspense>
     </div>

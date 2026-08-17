@@ -1,36 +1,8 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useLocale } from "../context/LocaleContext";
 import { signUpUser, signInUser } from "../services/authService";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Mail, Lock, User, Baby, Users, BookOpen, GraduationCap } from "lucide-react";
-
-const SelectionCard = ({ icon: Icon, title, subtitle, selected, onClick, accentColor }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    style={{
-      flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
-      padding: "18px 12px", borderRadius: 15,
-      border: selected ? `2px solid ${accentColor}` : "2px solid #262626",
-      background: selected ? `${accentColor}15` : "#141414",
-      cursor: "pointer", transition: "all 0.2s cubic-bezier(0.16,1,0.3,1)",
-      boxShadow: selected ? `0 0 24px ${accentColor}35` : "none",
-    }}
-  >
-    <div style={{ width: 44, height: 44, borderRadius: "50%", background: selected ? `${accentColor}22` : "#1c1c1c", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <Icon size={20} color={selected ? accentColor : "#666"} />
-    </div>
-    <div style={{ textAlign: "center" }}>
-      <p style={{ fontWeight: 600, fontSize: 13, color: selected ? "#fff" : "#999", margin: 0, letterSpacing: "-0.3px" }}>{title}</p>
-      {subtitle && <p style={{ fontSize: 11, color: "#555", marginTop: 2, letterSpacing: "-0.1px" }}>{subtitle}</p>}
-    </div>
-    {selected && (
-      <div style={{ width: 18, height: 18, borderRadius: "50%", background: accentColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <svg width="9" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-      </div>
-    )}
-  </button>
-);
+import { Loader2, Mail, Lock, User, BookOpen, GraduationCap, ArrowLeft } from "lucide-react";
 
 const InputField = ({ icon: Icon, label, type, value, onChange, placeholder, required }) => (
   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -51,175 +23,323 @@ const InputField = ({ icon: Icon, label, type, value, onChange, placeholder, req
 const Login = () => {
   const { t } = useLocale();
   const navigate = useNavigate();
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [step, setStep] = useState(1);
+
+  // Screen steps: "ask_age" -> "ask_role" (if 14+) -> "auth_form"
+  const [flowStep, setFlowStep] = useState("ask_age");
+  const [ageGroup, setAgeGroup] = useState(""); // "under14" or "14plus"
+  const [role, setRole] = useState("student");   // "student" or "teacher"
+  const [isSignUp, setIsSignUp] = useState(false); // false = Sign in, true = Create account
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [ageGroup, setAgeGroup] = useState("");
-  const [role, setRole] = useState("student");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const finalRole = ageGroup === "under14" ? "student" : role;
+  const handleUnder14 = () => {
+    setAgeGroup("under14");
+    setRole("student");
+    setFlowStep("auth_form");
+  };
 
-  const handleNext = (e) => { e.preventDefault(); setError(""); setStep(2); };
+  const handle14Plus = () => {
+    setAgeGroup("14plus");
+    setFlowStep("ask_role");
+  };
+
+  const handleRoleSelect = (selectedRole) => {
+    setRole(selectedRole);
+    setFlowStep("auth_form");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isSignUp && !ageGroup) { setError("Please select your age group."); return; }
-    setLoading(true); setError("");
+    setLoading(true);
+    setError("");
     try {
-      if (isSignUp) { await signUpUser(email, password, fullName, finalRole); }
-      else          { await signInUser(email, password); }
+      if (isSignUp) {
+        await signUpUser(email, password, fullName, role);
+      } else {
+        await signInUser(email, password);
+      }
       navigate("/");
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
-  const resetForm = (toSignUp) => {
-    setIsSignUp(toSignUp); setStep(1);
-    setEmail(""); setPassword(""); setFullName(""); setAgeGroup(""); setRole("student"); setError("");
+
+  const resetAll = () => {
+    setFlowStep("ask_age");
+    setAgeGroup("");
+    setRole("student");
+    setError("");
   };
 
   return (
     <div style={{ minHeight: "90vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px", position: "relative" }}>
-      {/* Decorative glow blobs */}
-      <div style={{ position: "absolute", top: 80, left: "25%", width: 320, height: 320, borderRadius: "50%", background: "rgba(106,76,245,0.12)", filter: "blur(100px)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: 60, right: "20%", width: 280, height: 280, borderRadius: "50%", background: "rgba(212,77,240,0.10)", filter: "blur(100px)", pointerEvents: "none" }} />
+      {/* Glow Orbs */}
+      <div style={{ position: "absolute", top: 80, left: "25%", width: 340, height: 340, borderRadius: "50%", background: "rgba(106,76,245,0.12)", filter: "blur(100px)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: 60, right: "20%", width: 300, height: 300, borderRadius: "50%", background: "rgba(212,77,240,0.10)", filter: "blur(100px)", pointerEvents: "none" }} />
 
-      <div className="animate-fade-up" style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1 }}>
-        {/* Card */}
-        <div style={{ background: "#141414", border: "1px solid #262626", borderRadius: 20, overflow: "hidden", boxShadow: "0 40px 80px rgba(0,0,0,0.6)" }}>
-          {/* Accent top stripe */}
-          <div style={{ height: 3, background: "linear-gradient(90deg,#6a4cf5,#d44df0,#ff7a3d)" }} />
+      {/* ── STEP 1: Age Check ("Are you 14 years old or older?") ────────────── */}
+      {flowStep === "ask_age" && (
+        <div className="animate-fade-up" style={{ width: "100%", maxWidth: 600, textAlign: "center" }}>
+          <h1
+            style={{
+              fontSize: 38,
+              fontWeight: 800,
+              letterSpacing: "-1px",
+              margin: 0,
+              background: "linear-gradient(90deg, #d44df0 0%, #a78bfa 50%, #6a4cf5 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              marginBottom: 12,
+            }}
+          >
+            SwarAstra
+          </h1>
+          <p style={{ fontSize: 16, color: "#94a3b8", marginBottom: 36, fontWeight: 400 }}>
+            Are you 14 years old or older?
+          </p>
 
-          <div style={{ padding: "36px 32px 32px" }}>
-            {/* Logo mark */}
-            <div style={{ marginBottom: 28 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg,#6a4cf5,#d44df0)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 900, color: "#fff", marginBottom: 16 }}>S</div>
-              <h2 style={{ fontSize: 24, fontWeight: 700, color: "#fff", letterSpacing: "-0.8px", margin: 0 }}>
-                {isSignUp ? (step === 1 ? "Create account" : "Who are you?") : "Sign in"}
-              </h2>
-              <p style={{ fontSize: 13, color: "#666", marginTop: 6, letterSpacing: "-0.1px" }}>
-                {isSignUp ? step === 1 ? "Join SwarAstra today" : "Tell us about yourself" : "Welcome back to SwarAstra"}
-              </p>
-            </div>
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              onClick={handle14Plus}
+              style={{
+                padding: "14px 32px",
+                borderRadius: 100,
+                background: "#141417",
+                border: "1px solid #27272a",
+                color: "#f8fafc",
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                minWidth: 200,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#8b5cf6";
+                e.currentTarget.style.transform = "scale(1.03)";
+                e.currentTarget.style.background = "#1c1c21";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#27272a";
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.background = "#141417";
+              }}
+            >
+              I am 14 or older
+            </button>
 
-            {/* Step dots */}
-            {isSignUp && (
-              <div style={{ display: "flex", gap: 6, marginBottom: 28 }}>
-                {[1,2].map(s => (
-                  <div key={s} style={{ height: 3, flex: 1, borderRadius: 100, background: step >= s ? "#6a4cf5" : "#262626", transition: "background 0.3s ease" }} />
-                ))}
-              </div>
-            )}
-
-            {/* Error */}
-            {error && (
-              <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 20, fontSize: 13, color: "#f87171" }}>
-                {error}
-              </div>
-            )}
-
-            {/* ── Login ── */}
-            {!isSignUp && (
-              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {/* Role indicator tab */}
-                <div style={{ display: "flex", background: "#1c1c1c", padding: 4, borderRadius: 12, border: "1px solid #262626", marginBottom: 4 }}>
-                  <button
-                    type="button"
-                    onClick={() => setRole("student")}
-                    style={{
-                      flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
-                      background: role === "student" ? "#6a4cf5" : "transparent",
-                      color: role === "student" ? "#fff" : "#666",
-                      fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    }}
-                  >
-                    <BookOpen size={14} /> Student / Learner
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole("teacher")}
-                    style={{
-                      flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
-                      background: role === "teacher" ? "#d44df0" : "transparent",
-                      color: role === "teacher" ? "#fff" : "#666",
-                      fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    }}
-                  >
-                    <GraduationCap size={14} /> Teacher
-                  </button>
-                </div>
-
-                <InputField icon={Mail} label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
-                <InputField icon={Lock} label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
-                <button type="submit" disabled={loading} className="btn-primary" style={{ width: "100%", marginTop: 8, justifyContent: "center" }}>
-                  {loading ? <Loader2 size={16} className="animate-spin" /> : null}
-                  {loading ? `Signing in as ${role === "teacher" ? "Teacher" : "Student"}...` : `Sign in as ${role === "teacher" ? "Teacher" : "Student"}`}
-                </button>
-              </form>
-            )}
-
-            {/* ── Signup Step 1 ── */}
-            {isSignUp && step === 1 && (
-              <form onSubmit={handleNext} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <InputField icon={User} label="Full Name" type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your full name" required />
-                <InputField icon={Mail} label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
-                <InputField icon={Lock} label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 6 characters" required />
-                <button type="submit" className="btn-primary" style={{ width: "100%", marginTop: 8, justifyContent: "center" }}>
-                  Next →
-                </button>
-              </form>
-            )}
-
-            {/* ── Signup Step 2 ── */}
-            {isSignUp && step === 2 && (
-              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <div>
-                  <p style={{ fontSize: 11, fontWeight: 500, color: "#666", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Your Age Group</p>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <SelectionCard icon={Baby} title="Under 14" subtitle="Young learner" selected={ageGroup === "under14"} onClick={() => { setAgeGroup("under14"); setRole("student"); }} accentColor="#6a4cf5" />
-                    <SelectionCard icon={Users} title="Age 14+" subtitle="Teen or adult" selected={ageGroup === "14plus"} onClick={() => setAgeGroup("14plus")} accentColor="#ff7a3d" />
-                  </div>
-                </div>
-                {ageGroup === "14plus" && (
-                  <div>
-                    <p style={{ fontSize: 11, fontWeight: 500, color: "#666", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>I am a...</p>
-                    <div style={{ display: "flex", gap: 10 }}>
-                      <SelectionCard icon={BookOpen} title="Regular User" subtitle="Student / Learner" selected={role === "student"} onClick={() => setRole("student")} accentColor="#6a4cf5" />
-                      <SelectionCard icon={GraduationCap} title="Teacher" subtitle="I teach students" selected={role === "teacher"} onClick={() => setRole("teacher")} accentColor="#d44df0" />
-                    </div>
-                  </div>
-                )}
-                {ageGroup && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "#1c1c1c", border: "1px solid #262626" }}>
-                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e" }} />
-                    <p style={{ fontSize: 13, color: "#999", margin: 0 }}>Joining as <strong style={{ color: "#fff", textTransform: "capitalize" }}>{finalRole}</strong></p>
-                  </div>
-                )}
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button type="button" onClick={() => { setStep(1); setError(""); }} className="btn-secondary" style={{ flex: 1 }}>
-                    ← Back
-                  </button>
-                  <button type="submit" disabled={loading || !ageGroup} className="btn-primary" style={{ flex: 2, justifyContent: "center" }}>
-                    {loading ? <><Loader2 size={15} className="animate-spin" /> Creating...</> : "Create account"}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Switch mode */}
-            <p style={{ textAlign: "center", fontSize: 13, color: "#666", marginTop: 28 }}>
-              {isSignUp ? "Already have an account?" : "No account yet?"}{" "}
-              <button onClick={() => resetForm(!isSignUp)} style={{ color: "#0099ff", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontSize: 13, letterSpacing: "-0.1px" }}>
-                {isSignUp ? "Sign in" : "Create one"}
-              </button>
-            </p>
+            <button
+              onClick={handleUnder14}
+              style={{
+                padding: "14px 32px",
+                borderRadius: 100,
+                background: "#141417",
+                border: "1px solid #27272a",
+                color: "#f8fafc",
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                minWidth: 200,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#06b6d4";
+                e.currentTarget.style.transform = "scale(1.03)";
+                e.currentTarget.style.background = "#1c1c21";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#27272a";
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.background = "#141417";
+              }}
+            >
+              I am under 14
+            </button>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* ── STEP 2: Role Selection (For 14+) ────────────────────────────── */}
+      {flowStep === "ask_role" && (
+        <div className="animate-fade-up" style={{ width: "100%", maxWidth: 600, textAlign: "center" }}>
+          <button
+            onClick={resetAll}
+            style={{
+              background: "none", border: "none", color: "#64748b", cursor: "pointer",
+              fontSize: 13, display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 20,
+            }}
+          >
+            <ArrowLeft size={16} /> Back to age check
+          </button>
+
+          <h1
+            style={{
+              fontSize: 36,
+              fontWeight: 800,
+              letterSpacing: "-1px",
+              margin: 0,
+              background: "linear-gradient(90deg, #d44df0 0%, #a78bfa 50%, #6a4cf5 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              marginBottom: 10,
+            }}
+          >
+            SwarAstra
+          </h1>
+          <p style={{ fontSize: 16, color: "#94a3b8", marginBottom: 36, fontWeight: 400 }}>
+            How would you like to join?
+          </p>
+
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              onClick={() => handleRoleSelect("student")}
+              style={{
+                flex: "1 1 240px",
+                maxWidth: 260,
+                padding: "24px 20px",
+                borderRadius: 20,
+                background: "#141417",
+                border: "1px solid #27272a",
+                color: "#f8fafc",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 12,
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#6a4cf5";
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.background = "#1c1c21";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#27272a";
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.background = "#141417";
+              }}
+            >
+              <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(106,76,245,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#a78bfa" }}>
+                <BookOpen size={24} />
+              </div>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Regular User / Student</span>
+              <span style={{ fontSize: 12, color: "#64748b" }}>Learn Gujarati signs, maths & science</span>
+            </button>
+
+            <button
+              onClick={() => handleRoleSelect("teacher")}
+              style={{
+                flex: "1 1 240px",
+                maxWidth: 260,
+                padding: "24px 20px",
+                borderRadius: 20,
+                background: "#141417",
+                border: "1px solid #27272a",
+                color: "#f8fafc",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 12,
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#d44df0";
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.background = "#1c1c21";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#27272a";
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.background = "#141417";
+              }}
+            >
+              <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(212,77,240,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#e86af5" }}>
+                <GraduationCap size={24} />
+              </div>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Teacher</span>
+              <span style={{ fontSize: 12, color: "#64748b" }}>Add questions & guide students</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 3: Sign In / Create Account Interface ────────────────────── */}
+      {flowStep === "auth_form" && (
+        <div className="animate-fade-up" style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1 }}>
+          <div style={{ background: "#141414", border: "1px solid #262626", borderRadius: 20, overflow: "hidden", boxShadow: "0 40px 80px rgba(0,0,0,0.6)" }}>
+            <div style={{ height: 3, background: role === "teacher" ? "linear-gradient(90deg,#d44df0,#e86af5)" : "linear-gradient(90deg,#6a4cf5,#d44df0,#ff7a3d)" }} />
+
+            <div style={{ padding: "32px 28px 28px" }}>
+              {/* Back button */}
+              <button
+                type="button"
+                onClick={() => setFlowStep(ageGroup === "under14" ? "ask_age" : "ask_role")}
+                style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 4, marginBottom: 16 }}
+              >
+                <ArrowLeft size={14} /> Change options
+              </button>
+
+              {/* Logo + Header */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: "linear-gradient(135deg,#6a4cf5,#d44df0)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff" }}>S</div>
+                  <span style={{ fontSize: 11, padding: "4px 10px", borderRadius: 100, background: role === "teacher" ? "rgba(212,77,240,0.15)" : "rgba(106,76,245,0.15)", color: role === "teacher" ? "#e86af5" : "#a78bfa", border: `1px solid ${role === "teacher" ? "rgba(212,77,240,0.3)" : "rgba(106,76,245,0.3)"}`, textTransform: "capitalize", fontWeight: 600 }}>
+                    {role} • {ageGroup === "under14" ? "Under 14" : "14+"}
+                  </span>
+                </div>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#fff", letterSpacing: "-0.8px", marginTop: 14, marginBotton: 4 }}>
+                  {isSignUp ? `Create ${role === "teacher" ? "Teacher" : "Student"} Account` : `Sign In as ${role === "teacher" ? "Teacher" : "Student"}`}
+                </h2>
+                <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>
+                  {isSignUp ? "Enter your details to register" : "Enter your email & password to continue"}
+                </p>
+              </div>
+
+              {/* Error Alert */}
+              {error && (
+                <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#f87171" }}>
+                  {error}
+                </div>
+              )}
+
+              {/* Form */}
+              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {isSignUp && (
+                  <InputField icon={User} label="Full Name" type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your full name" required />
+                )}
+                <InputField icon={Mail} label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
+                <InputField icon={Lock} label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
+
+                <button type="submit" disabled={loading} className="btn-primary" style={{ width: "100%", marginTop: 8, justifyContent: "center" }}>
+                  {loading ? <Loader2 size={16} className="animate-spin" /> : null}
+                  {loading
+                    ? (isSignUp ? "Creating account..." : "Signing in...")
+                    : (isSignUp ? "Create Account" : "Sign In")}
+                </button>
+              </form>
+
+              {/* Mode switch (Sign in <-> Create account) */}
+              <p style={{ textAlign: "center", fontSize: 13, color: "#64748b", marginTop: 24, marginBottom: 0 }}>
+                {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
+                <button
+                  onClick={() => { setIsSignUp(!isSignUp); setError(""); }}
+                  style={{ color: "#0099ff", background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
+                >
+                  {isSignUp ? "Sign In" : "Create Account"}
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
