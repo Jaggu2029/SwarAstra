@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLocale } from "../context/LocaleContext";
 import { signUpUser, signInUser } from "../services/authService";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +26,14 @@ const Login = () => {
 
   // Screen steps: "ask_age" -> "ask_role" (if 14+) -> "auth_form"
   const [flowStep, setFlowStep] = useState("ask_age");
+
+  // Intro Animation Timeline Stages:
+  // 0: Blank black screen (0.0s)
+  // 1: Logo materializes & holds centered with soft breathing glow (0.1s - 1.8s)
+  // 2: Smooth transition into Age Gate — logo slides up, question & buttons stagger in (1.8s - 2.6s)
+  // 3: Fully settled & interactive Age Gate (2.6s+)
+  const [introStage, setIntroStage] = useState(0);
+
   const [ageGroup, setAgeGroup] = useState(""); // "under14" or "14plus"
   const [role, setRole] = useState("student");   // "student" or "teacher"
   const [isSignUp, setIsSignUp] = useState(false); // false = Sign in, true = Create account
@@ -35,6 +43,21 @@ const Login = () => {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    // Stage 1: Logo materializes centered at 100ms
+    const t1 = setTimeout(() => setIntroStage(1), 100);
+    // Stage 2: Transition out to Age Gate at 1800ms
+    const t2 = setTimeout(() => setIntroStage(2), 1800);
+    // Stage 3: Fully settled at 2600ms
+    const t3 = setTimeout(() => setIntroStage(3), 2600);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, []);
 
   const handleUnder14 = () => {
     setAgeGroup("under14");
@@ -72,40 +95,123 @@ const Login = () => {
 
   const resetAll = () => {
     setFlowStep("ask_age");
+    setIntroStage(3); // Keep fully settled on reset
     setAgeGroup("");
     setRole("student");
     setError("");
   };
 
   return (
-    <div style={{ minHeight: "90vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px", position: "relative" }}>
+    <div style={{ minHeight: "92vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px", position: "relative", backgroundColor: "#0A0A0F" }}>
       {/* Glow Orbs */}
-      <div style={{ position: "absolute", top: 80, left: "25%", width: 340, height: 340, borderRadius: "50%", background: "rgba(106,76,245,0.12)", filter: "blur(100px)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: 60, right: "20%", width: 300, height: 300, borderRadius: "50%", background: "rgba(212,77,240,0.10)", filter: "blur(100px)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: "20%", left: "30%", width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(212,77,240,0.10) 50%, transparent 75%)", filter: "blur(90px)", pointerEvents: "none" }} />
 
-      {/* ── STEP 1: Age Check ("Are you 14 years old or older?") ────────────── */}
+      {/* ── STEP 1: Age Check with 2-Stage Logo Intro Animation ────────────── */}
       {flowStep === "ask_age" && (
-        <div className="animate-fade-up" style={{ width: "100%", maxWidth: 600, textAlign: "center" }}>
-          <h1
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 600,
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 380,
+          }}
+        >
+          {/* Logo Container (Centred in Stage 1, slides up in Stage 2) */}
+          <div
             style={{
-              fontSize: 38,
-              fontWeight: 800,
-              letterSpacing: "-1px",
-              margin: 0,
-              background: "linear-gradient(90deg, #d44df0 0%, #a78bfa 50%, #6a4cf5 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              marginBottom: 12,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              transform:
+                introStage === 0
+                  ? "translateY(20px) scale(0.85)"
+                  : introStage === 1
+                  ? "translateY(0px) scale(1)"
+                  : "translateY(-12px) scale(0.92)",
+              opacity: introStage === 0 ? 0 : 1,
+              transition:
+                introStage === 2 || introStage === 3
+                  ? "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1)"
+                  : "transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1)",
+              willChange: "transform, opacity",
+              marginBottom: introStage >= 2 ? 16 : 0,
             }}
           >
-            SwarAstra
-          </h1>
-          <p style={{ fontSize: 16, color: "#94a3b8", marginBottom: 36, fontWeight: 400 }}>
+            {/* SwarAstra Emblem Graphic */}
+            <div
+              style={{
+                width: introStage >= 2 ? 110 : 140,
+                height: introStage >= 2 ? 110 : 140,
+                borderRadius: "50%",
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#0A0A0F",
+                boxShadow:
+                  introStage === 1
+                    ? "0 0 45px rgba(212,77,240,0.5), 0 0 90px rgba(106,76,245,0.35)"
+                    : "0 0 25px rgba(212,77,240,0.3)",
+                transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+                marginBottom: 12,
+              }}
+            >
+              <img
+                src="/swarastra_logo.png"
+                alt="SwarAstra Logo"
+                style={{
+                  width: "115%",
+                  height: "115%",
+                  objectFit: "cover",
+                  borderRadius: "50%",
+                  mixBlendMode: "screen",
+                  filter: "drop-shadow(0 0 15px rgba(139,92,246,0.8)) contrast(1.15)",
+                }}
+              />
+            </div>
+
+            {/* Logo Typography */}
+            <h1
+              style={{
+                fontSize: introStage >= 2 ? 34 : 42,
+                fontWeight: 800,
+                letterSpacing: "-1px",
+                margin: 0,
+                background: "linear-gradient(90deg, #d44df0 0%, #a78bfa 50%, #6a4cf5 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                filter: introStage === 1 ? "drop-shadow(0 0 16px rgba(212,77,240,0.4))" : "none",
+                transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+            >
+              SwarAstra
+            </h1>
+          </div>
+
+          {/* Subtitle Question ("Are you 14 years old or older?") — Stagger 0ms in Stage 2 */}
+          <p
+            style={{
+              fontSize: 16,
+              color: "#94a3b8",
+              margin: "0 0 32px 0",
+              fontWeight: 400,
+              opacity: introStage >= 2 ? 1 : 0,
+              transform: introStage >= 2 ? "translateY(0px)" : "translateY(15px)",
+              transition: "opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0ms, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0ms",
+              pointerEvents: introStage >= 2 ? "auto" : "none",
+            }}
+          >
             Are you 14 years old or older?
           </p>
 
-          <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+          {/* Buttons Container */}
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", width: "100%" }}>
+            {/* Button 1: "I am 14 or older" — Stagger +150ms in Stage 2 */}
             <button
               onClick={handle14Plus}
               style={{
@@ -117,23 +223,29 @@ const Login = () => {
                 fontSize: 14,
                 fontWeight: 500,
                 cursor: "pointer",
-                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                transition: "border-color 0.2s, background 0.2s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 150ms, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 150ms",
                 minWidth: 200,
+                opacity: introStage >= 2 ? 1 : 0,
+                transform: introStage >= 2 ? "translateY(0px)" : "translateY(15px)",
+                pointerEvents: introStage >= 2 ? "auto" : "none",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#8b5cf6";
-                e.currentTarget.style.transform = "scale(1.03)";
-                e.currentTarget.style.background = "#1c1c21";
+                if (introStage >= 2) {
+                  e.currentTarget.style.borderColor = "#8b5cf6";
+                  e.currentTarget.style.background = "#1c1c21";
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#27272a";
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.background = "#141417";
+                if (introStage >= 2) {
+                  e.currentTarget.style.borderColor = "#27272a";
+                  e.currentTarget.style.background = "#141417";
+                }
               }}
             >
               I am 14 or older
             </button>
 
+            {/* Button 2: "I am under 14" — Stagger +300ms in Stage 2 */}
             <button
               onClick={handleUnder14}
               style={{
@@ -145,18 +257,23 @@ const Login = () => {
                 fontSize: 14,
                 fontWeight: 500,
                 cursor: "pointer",
-                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                transition: "border-color 0.2s, background 0.2s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 300ms, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 300ms",
                 minWidth: 200,
+                opacity: introStage >= 2 ? 1 : 0,
+                transform: introStage >= 2 ? "translateY(0px)" : "translateY(15px)",
+                pointerEvents: introStage >= 2 ? "auto" : "none",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#06b6d4";
-                e.currentTarget.style.transform = "scale(1.03)";
-                e.currentTarget.style.background = "#1c1c21";
+                if (introStage >= 2) {
+                  e.currentTarget.style.borderColor = "#06b6d4";
+                  e.currentTarget.style.background = "#1c1c21";
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#27272a";
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.background = "#141417";
+                if (introStage >= 2) {
+                  e.currentTarget.style.borderColor = "#27272a";
+                  e.currentTarget.style.background = "#141417";
+                }
               }}
             >
               I am under 14
@@ -295,7 +412,7 @@ const Login = () => {
                     {role} • {ageGroup === "under14" ? "Under 14" : "14+"}
                   </span>
                 </div>
-                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#fff", letterSpacing: "-0.8px", marginTop: 14, marginBotton: 4 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#fff", letterSpacing: "-0.8px", marginTop: 14, marginBottom: 4 }}>
                   {isSignUp ? `Create ${role === "teacher" ? "Teacher" : "Student"} Account` : `Sign In as ${role === "teacher" ? "Teacher" : "Student"}`}
                 </h2>
                 <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>
